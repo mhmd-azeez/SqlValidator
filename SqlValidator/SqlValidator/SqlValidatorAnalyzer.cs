@@ -57,15 +57,6 @@ namespace SqlValidator
 
             if (sql is null) return;
 
-            foreach (var param in parameters)
-            {
-                if (sql.Contains($"@{param.Name}") == false)
-                {
-                    context.ReportDiagnostic(
-                        Diagnostic.Create(_rule, param.Location, $"Unused parameter: {param.Name}"));
-                }
-            }
-
             try
             {
                 var connectionString = Environment.GetEnvironmentVariable("SqlValidator_ConnectionString", EnvironmentVariableTarget.User);
@@ -88,6 +79,16 @@ namespace SqlValidator
             catch (Exception ex)
             {
                 context.ReportDiagnostic(Diagnostic.Create(_rule, node.GetLocation(), ex.Message));
+                return;
+            }
+
+            foreach (var param in parameters)
+            {
+                if (sql.Contains($"@{param.Name}") == false)
+                {
+                    context.ReportDiagnostic(
+                        Diagnostic.Create(_rule, param.Location, $"Unused parameter: {param.Name}"));
+                }
             }
         }
 
@@ -117,14 +118,18 @@ namespace SqlValidator
                     paramsExpr.Expression is IdentifierNameSyntax command &&
                     context.SemanticModel.GetSymbolInfo(command).Symbol == variableSymbol)
                 {
-                    var paramExpression = invocation.ArgumentList.Arguments[0].Expression;
-                    var paramName = paramExpression.GetConstantValue(context.Compilation);
+                    var paramNameExpression = invocation.ArgumentList.Arguments[0].Expression;
+                    var valueExpression = invocation.ArgumentList.Arguments[1].Expression;
+                    var paramName = paramNameExpression.GetConstantValue(context.Compilation);
+
+                    if (paramName.StartsWith("@") && paramName.Length >= 2)
+                        paramName = paramName.Substring(1);
 
                     parameters.Add(new Param
                     {
                         Name = paramName,
                         Location = invocation.GetLocation(),
-                        Value = paramExpression.GetDummyValue(context.SemanticModel)
+                        Value = valueExpression.GetDummyValue(context.SemanticModel)
                     });
                 }
             }

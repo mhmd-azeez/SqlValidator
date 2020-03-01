@@ -71,21 +71,35 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         public static object GetDummyValue(this ExpressionSyntax paramExpression, SemanticModel semanticModel)
         {
             var typeInfo = semanticModel.GetTypeInfo(paramExpression);
+            if (typeInfo.Type is null) return string.Empty;
+
             switch (typeInfo.Type.Name)
             {
                 case nameof(String):
                     return string.Empty;
+                case nameof(Byte):
+                    return (byte)0;
+                case nameof(Int16):
+                    return (short)0;
                 case nameof(Int32):
                     return 0;
-                case nameof(Double):
-                    return 0d;
+                case nameof(UInt32):
+                    return 0U;
+                case nameof(Int64):
+                    return 0L;
+                case nameof(UInt64):
+                    return 0UL;
                 case nameof(Single):
                     return 0f;
+                case nameof(Double):
+                    return 0d;
+                case nameof(Decimal):
+                    return 0d;
                 case nameof(Boolean):
                     return false;
             }
 
-            throw new ArgumentOutOfRangeException();
+            return string.Empty;
         }
 
     }
